@@ -20,6 +20,10 @@ Komendy deweloperskie są zdefiniowane w `package.json`. Hooki `predev` i `prebu
 
 To repozytorium jest szablonem GitHuba. Kiedy utworzysz z niego nowe repozytorium, jednorazowy workflow **Załóż zgłoszenia startowe** (`.github/workflows/bootstrap-issues.yml`) uruchomi się automatycznie przy pierwszym pushu na `main` i **założy 9 zgłoszeń po polsku** z propozycjami pierwszych funkcjonalności. Każde zgłoszenie jest zdefiniowane plikiem Markdown w `.github/bootstrap-issues/` (pierwszy nagłówek to tytuł, reszta to treść), więc możesz tam edytować, dodawać i usuwać pliki, żeby sterować tym, co powstanie.
 
+### Filtrowanie gier
+
+Na stronie głównej użytkownicy mogą filtrować listę gier po jednej lub wielu kategoriach oraz po wydawcy. Filtry działają łącznie i zachowują spójny, dostępny interfejs w ciemnym motywie projektu.
+
 Workflow uruchamia się wyłącznie w repozytoriach utworzonych z szablonu (warunek `if: ${{ !github.event.repository.is_template }}` pomija sam szablon), a po założeniu zgłoszeń usuwa siebie oraz katalog `.github/bootstrap-issues/` w commicie porządkowym, żeby nigdy nie wykonał się ponownie.
 
 ## Pierwsze kroki
