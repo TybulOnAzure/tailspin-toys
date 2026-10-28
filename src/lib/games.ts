@@ -50,7 +50,6 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
-/** Typ zapytania bazowego łączącego gry z kategoriami i wydawcami. */
 /** Kryteria filtrowania listy gier. Wiele kategorii oznacza dopasowanie do dowolnej z nich. */
 export interface GameFilters {
     categoryIds?: number[];

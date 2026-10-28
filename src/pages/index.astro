@@ -122,15 +122,26 @@ const publishers = await getAllPublishers(getDatabase());
     const resultsSummary = document.querySelector<HTMLParagraphElement>('[data-testid="games-results-summary"]');
     const clearButton = document.querySelector<HTMLButtonElement>('[data-testid="clear-filters"]');
 
+    /** Zwraca poprawną polską formę rzeczownika dla liczby gier w dopełnieniu biernikowym. */
+    function gameCountLabel(count: number): string {
+      const lastTwoDigits = count % 100;
+      const lastDigit = count % 10;
+
+      if (count === 1) {
+        return 'grę';
+      }
+
+      return lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14) ? 'gry' : 'gier';
+    }
+
     /** Aktualizuje dostępny komunikat z liczbą widocznych gier. */
     function updateSummary(visibleCount: number): void {
       if (!resultsSummary || cards.length === 0) {
         return;
       }
 
-      const totalLabel = cards.length === 1 ? 'gra' : cards.length >= 2 && cards.length <= 4 ? 'gry' : 'gier';
-      const visibleLabel = visibleCount === 1 ? 'gra' : visibleCount >= 2 && visibleCount <= 4 ? 'gry' : 'gier';
-      resultsSummary.textContent = `Wyświetlono ${visibleCount} ${visibleLabel} z ${cards.length} ${totalLabel}.`;
+      const totalLabel = cards.length === 1 ? 'gry' : 'gier';
+      resultsSummary.textContent = `Wyświetlono ${visibleCount} ${gameCountLabel(visibleCount)} z ${cards.length} ${totalLabel}.`;
     }
 
     /** Stosuje aktywne filtry kategorii i wydawcy do kart gier. */

@@ -15,9 +15,7 @@ test.describe('Filtrowanie gier', () => {
       const visibleCards = page.locator('[data-testid="game-card"]:visible');
       await expect(visibleCards).not.toHaveCount(0);
 
-      await expect(page.getByTestId('games-results-summary')).toHaveText(
-        /Wyświetlono \d+ (?:gra|gry|gier) z \d+ (?:gra|gry|gier)\./,
-      );
+      await expect(page.getByTestId('games-results-summary')).toHaveText('Wyświetlono 4 gry z 21 gier.');
       const categories = await visibleCards.getByTestId('game-category').allTextContents();
       expect(categories.every((category) => category === 'Strategia')).toBeTruthy();
     });
