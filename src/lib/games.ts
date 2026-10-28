@@ -1,7 +1,7 @@
-import { eq, asc } from 'drizzle-orm';
+import { asc, and, eq, inArray } from 'drizzle-orm';
 import type { Database } from './db';
 import { games, categories, publishers } from '../../db/schema';
-import type { Game } from '../types/game';
+import type { Category, Game, Publisher } from '../types/game';
 
 const gameSelection = {
     id: games.id,
@@ -50,9 +50,42 @@ function baseGamesQuery(db: Database) {
         .leftJoin(publishers, eq(games.publisherId, publishers.id));
 }
 
-/** Wszystkie gry posortowane po tytule. */
-export async function getAllGames(db: Database): Promise<Game[]> {
-    const rows = await baseGamesQuery(db).orderBy(asc(games.title));
+/** Typ zapytania bazowego łączącego gry z kategoriami i wydawcami. */
+/** Kryteria filtrowania listy gier. Wiele kategorii oznacza dopasowanie do dowolnej z nich. */
+export interface GameFilters {
+    categoryIds?: number[];
+    publisherIds?: number[];
+}
+
+/** Wszystkie kategorie posortowane alfabetycznie. */
+export async function getAllCategories(db: Database): Promise<Category[]> {
+    const rows = await db
+        .select({ id: categories.id, name: categories.name })
+        .from(categories)
+        .orderBy(asc(categories.name));
+    return rows.map((row) => ({ id: row.id, name: row.name }));
+}
+
+/** Wszyscy wydawcy posortowani alfabetycznie. */
+export async function getAllPublishers(db: Database): Promise<Publisher[]> {
+    const rows = await db
+        .select({ id: publishers.id, name: publishers.name })
+        .from(publishers)
+        .orderBy(asc(publishers.name));
+    return rows.map((row) => ({ id: row.id, name: row.name }));
+}
+
+/**
+ * Zwraca gry posortowane po tytule, opcjonalnie filtrowane po kategoriach i wydawcach.
+ * Wiele kategorii łączy alternatywnie, a kategorie i wydawca łączą się przez AND.
+ */
+export async function getAllGames(db: Database, filters: GameFilters = {}): Promise<Game[]> {
+    const categoryCondition = filters.categoryIds?.length ? inArray(categories.id, filters.categoryIds) : undefined;
+    const publisherCondition = filters.publisherIds?.length ? inArray(publishers.id, filters.publisherIds) : undefined;
+    const query = baseGamesQuery(db);
+    const rows = categoryCondition || publisherCondition
+        ? await query.where(and(categoryCondition, publisherCondition)).orderBy(asc(games.title))
+        : await query.orderBy(asc(games.title));
     return rows.map(mapGame);
 }
 

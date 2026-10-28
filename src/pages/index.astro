@@ -4,11 +4,13 @@ import GameCard from '../components/GameCard.astro';
 import PageHero from '../components/PageHero.astro';
 import EmptyState from '../components/EmptyState.astro';
 import { getDatabase } from '../lib/db';
-import { getAllGames } from '../lib/games';
+import { getAllCategories, getAllGames, getAllPublishers } from '../lib/games';
 
 export const prerender = true;
 
 const games = await getAllGames(getDatabase());
+const categories = await getAllCategories(getDatabase());
+const publishers = await getAllPublishers(getDatabase());
 ---
 
 <Layout title="Tailspin Toys - Wesprzyj swoją nową ulubioną grę!">
@@ -18,16 +20,164 @@ const games = await getAllGames(getDatabase());
       subtitle="Znajdź swoją następną grę. A może nawet ją wesprzesz? Przejrzyj naszą kolekcję!"
     />
 
+    {games.length > 0 && (
+      <section
+        class="mb-8 rounded-2xl border border-slate-700 bg-slate-800/80 p-5 shadow-lg backdrop-blur-sm"
+        data-testid="game-filters"
+        aria-label="Filtry gier"
+      >
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-slate-100">Filtruj gry</h2>
+            <p class="text-sm text-slate-300">Wybierz jedną lub więcej kategorii oraz wydawcę.</p>
+          </div>
+
+          <button
+            type="button"
+            class="inline-flex items-center justify-center rounded-lg border border-slate-600 bg-slate-700/70 px-3 py-2 text-sm font-medium text-slate-100 transition-colors duration-200 hover:border-blue-500 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            data-testid="clear-filters"
+          >
+            Wyczyść filtry
+          </button>
+        </div>
+
+        <div class="mt-6 grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(220px,1fr)]">
+          <fieldset class="space-y-3" data-testid="category-filters">
+            <legend class="mb-2 text-sm font-medium text-slate-200">Kategorie</legend>
+            <div class="flex flex-wrap gap-2">
+              {categories.map((category) => (
+                <label
+                  class="inline-flex items-center gap-2 rounded-full border border-slate-600 bg-slate-700/60 px-3 py-2 text-sm text-slate-200 transition-all duration-200 hover:border-blue-500 hover:bg-slate-700 focus-within:ring-2 focus-within:ring-blue-500"
+                  data-testid={`category-filter-${category.id}`}
+                >
+                  <input
+                    type="checkbox"
+                    value={category.id}
+                    class="h-4 w-4 rounded border-slate-500 bg-slate-900 text-blue-500 focus:ring-blue-500"
+                    data-testid="category-filter-checkbox"
+                    aria-label={`Filtruj po kategorii ${category.name}`}
+                  />
+                  <span>{category.name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          <div class="space-y-2">
+            <label for="publisher-filter" class="text-sm font-medium text-slate-200">Wydawca</label>
+            <select
+              id="publisher-filter"
+              class="w-full rounded-xl border border-slate-600 bg-slate-900/80 px-3 py-2.5 text-slate-100 shadow-inner transition-colors duration-200 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              data-testid="publisher-filter"
+              aria-label="Filtruj po wydawcy"
+            >
+              <option value="">Wszyscy wydawcy</option>
+              {publishers.map((publisher) => (
+                <option value={publisher.id}>{publisher.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </section>
+    )}
+
     <div>
-      <h2 class="text-2xl font-medium mb-6 text-slate-100">Polecane gry</h2>
+      <div class="mb-6 flex items-center justify-between gap-3">
+        <h2 class="text-2xl font-medium text-slate-100">Polecane gry</h2>
+        {games.length > 0 && (
+          <p class="text-sm text-slate-300" data-testid="games-results-summary" role="status" aria-live="polite">
+            Wyświetlono {games.length} gier.
+          </p>
+        )}
+      </div>
 
       {games.length === 0 ? (
         <EmptyState text="Na razie nie ma żadnych gier." />
       ) : (
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
-          {games.map((game) => <GameCard game={game} />)}
-        </div>
+        <>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" data-testid="games-grid">
+            {games.map((game) => <GameCard game={game} />)}
+          </div>
+
+          <div
+            class="mt-6 hidden rounded-xl border border-slate-700 bg-slate-800/60 p-4 text-slate-300"
+            data-testid="filtered-empty-state"
+            role="status"
+            aria-live="polite"
+          >
+            Brak gier pasujących do wybranych filtrów.
+          </div>
+        </>
       )}
     </div>
   </div>
+
+  <script>
+    const categoryCheckboxes = Array.from(
+      document.querySelectorAll<HTMLInputElement>('[data-testid="category-filter-checkbox"]'),
+    );
+    const publisherSelect = document.querySelector<HTMLSelectElement>('[data-testid="publisher-filter"]');
+    const cards = Array.from(document.querySelectorAll<HTMLAnchorElement>('[data-testid="game-card"]'));
+    const emptyState = document.querySelector<HTMLDivElement>('[data-testid="filtered-empty-state"]');
+    const resultsSummary = document.querySelector<HTMLParagraphElement>('[data-testid="games-results-summary"]');
+    const clearButton = document.querySelector<HTMLButtonElement>('[data-testid="clear-filters"]');
+
+    /** Aktualizuje dostępny komunikat z liczbą widocznych gier. */
+    function updateSummary(visibleCount: number): void {
+      if (!resultsSummary || cards.length === 0) {
+        return;
+      }
+
+      const totalLabel = cards.length === 1 ? 'gra' : cards.length >= 2 && cards.length <= 4 ? 'gry' : 'gier';
+      const visibleLabel = visibleCount === 1 ? 'gra' : visibleCount >= 2 && visibleCount <= 4 ? 'gry' : 'gier';
+      resultsSummary.textContent = `Wyświetlono ${visibleCount} ${visibleLabel} z ${cards.length} ${totalLabel}.`;
+    }
+
+    /** Stosuje aktywne filtry kategorii i wydawcy do kart gier. */
+    function applyFilters(): void {
+      const selectedCategories = new Set(
+        categoryCheckboxes.filter((checkbox) => checkbox.checked).map((checkbox) => Number(checkbox.value)),
+      );
+      const selectedPublisherId = publisherSelect?.value ? Number(publisherSelect.value) : null;
+
+      let visibleCount = 0;
+
+      cards.forEach((card) => {
+        const categoryId = Number(card.getAttribute('data-game-category-id') ?? '0');
+        const publisherId = Number(card.getAttribute('data-game-publisher-id') ?? '0');
+        const matchesCategory = selectedCategories.size === 0 || selectedCategories.has(categoryId);
+        const matchesPublisher = selectedPublisherId === null || publisherId === selectedPublisherId;
+        const isVisible = matchesCategory && matchesPublisher;
+
+        card.hidden = !isVisible;
+        if (isVisible) {
+          visibleCount += 1;
+        }
+      });
+
+      if (emptyState) {
+        emptyState.hidden = visibleCount !== 0;
+      }
+
+      updateSummary(visibleCount);
+    }
+
+    categoryCheckboxes.forEach((checkbox) => {
+      checkbox.addEventListener('change', applyFilters);
+    });
+
+    publisherSelect?.addEventListener('change', applyFilters);
+    clearButton?.addEventListener('click', () => {
+      categoryCheckboxes.forEach((checkbox) => {
+        checkbox.checked = false;
+      });
+
+      if (publisherSelect) {
+        publisherSelect.value = '';
+      }
+      applyFilters();
+    });
+
+    applyFilters();
+  </script>
 </Layout>
